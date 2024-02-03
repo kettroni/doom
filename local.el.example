@@ -1,0 +1,8 @@
+;;; local.el.example --- Template for machine-local customizations -*- lexical-binding: t; -*-
+
+;; Copy this file to local.el and add private project/employer settings there.
+;; Example only; replace with your own remote and local directory paths.
+;; (setq opencode-directory-mappings
+;;       '(("/ssh:USER@HOST:/remote/project"
+;;          . "/local/project")))
+

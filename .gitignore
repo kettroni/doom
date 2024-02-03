@@ -1,0 +1,17 @@
+# Machine-local credentials, project-specific customizations, and generated Customize state
+/secrets.el
+/local.el
+/custom.el
+
+
+# Compiled
+*.elc
+
+# Packaging
+.cask
+
+# Backup files
+*~
+
+# Undo-tree save-files
+*.~undo-tree
