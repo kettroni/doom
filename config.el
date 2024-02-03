@@ -1,77 +1,109 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
-;; Place your private configuration here! Remember, you do not need to run 'doom
-;; sync' after modifying this file!
-
-
-;; Some functionality uses this to identify you, e.g. GPG configuration, email
-;; clients, file templates and snippets. It is optional.
-;; (setq user-full-name "John Doe"
-;;       user-mail-address "john@doe.com")
-
-;; Doom exposes five (optional) variables for controlling fonts in Doom:
-;;
-;; - `doom-font' -- the primary font to use
-;; - `doom-variable-pitch-font' -- a non-monospace font (where applicable)
-;; - `doom-big-font' -- used for `doom-big-font-mode'; use this for
-;;   presentations or streaming.
-;; - `doom-symbol-font' -- for symbols
-;; - `doom-serif-font' -- for the `fixed-pitch-serif' face
-;;
-;; See 'C-h v doom-font' for documentation and more examples of what they
-;; accept. For example:
-;;
-
-(setq doom-font (font-spec :family "Fira Code" :size 24 :weight 'semi-light))
-
-;;
-;; If you or Emacs can't find your font, use 'M-x describe-font' to look them
-;; up, `M-x eval-region' to execute elisp code, and 'M-x doom/reload-font' to
-;; refresh your font settings. If Emacs still can't find your font, it likely
-;; wasn't installed correctly. Font issues are rarely Doom issues!
-
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
+;; Display stuff
+(toggle-frame-fullscreen)
+(setq doom-font (font-spec :family "Fira Code" :size 21 :weight 'semi-light))
 (setq doom-theme 'doom-gruvbox)
+(setq display-line-numbers-type 'relative)
+(setq doom-modeline-height 1)
+(custom-set-faces
+ '(mode-line ((t (:family "Fira Code" :height 0.80))))
+ '(mode-line-inactive ((t (:family "Fira Code" :height 0.80)))))
 
-;; This determines the style of line numbers in effect. If set to `nil', line
-;; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type t)
-
-;; If you use `org' and don't want your org files in the default location below,
-;; change `org-directory'. It must be set before org loads!
+;; Paths
 (setq org-directory "~/org/")
 
+;; This sets projectile path
+(setq projectile-project-search-path '("~/code"))
+(setq projectile-auto-discover t)
 
-;; Whenever you reconfigure a package, make sure to wrap your config in an
-;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
-;;
-;;   (after! PACKAGE
-;;     (setq x y))
-;;
-;; The exceptions to this rule:
-;;
-;;   - Setting file/directory variables (like `org-directory')
-;;   - Setting variables which explicitly tell you to set them before their
-;;     package is loaded (see 'C-h v VARIABLE' to look up their documentation).
-;;   - Setting doom variables (which start with 'doom-' or '+').
-;;
-;; Here are some additional functions/macros that will help you configure Doom.
-;;
-;; - `load!' for loading external *.el files relative to this one
-;; - `use-package!' for configuring packages
-;; - `after!' for running code after a package has loaded
-;; - `add-load-path!' for adding directories to the `load-path', relative to
-;;   this file. Emacs searches the `load-path' when you load packages with
-;;   `require' or `use-package'.
-;; - `map!' for binding new keys
-;;
-;; To get information about any of these functions/macros, move the cursor over
-;; the highlighted symbol at press 'K' (non-evil users must press 'C-c c k').
-;; This will open documentation for it, including demos of how they are used.
-;; Alternatively, use `C-h o' to look up a symbol (functions, variables, faces,
-;; etc).
-;;
-;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
-;; they are implemented.
+;; My multiple cursors setup.
+(defhydra mc-hydra (:color pink
+                    :hint nil
+                    :pre (evil-mc-pause-cursors))
+  "
+^Match^            ^Line-wise^           ^Manual^
+^^^^^^----------------------------------------------------
+_g_: match all     _J_: make & go down   _o_: toggle here
+_m_: make & next   _K_: make & go up     _r_: remove last
+_M_: make & prev   ^ ^                   _R_: remove all
+_n_: skip & next   ^ ^                   _p_: pause/resume
+_N_: skip & prev
+
+
+Current pattern: %`evil-mc-pattern
+
+"
+  ("g" #'evil-mc-make-all-cursors)
+  ("m" #'evil-mc-make-and-goto-next-match)
+  ("M" #'evil-mc-make-and-goto-prev-match)
+  ("n" #'evil-mc-skip-and-goto-next-match)
+  ("N" #'evil-mc-skip-and-goto-prev-match)
+  ("J" #'evil-mc-make-cursor-move-next-line)
+  ("K" #'evil-mc-make-cursor-move-prev-line)
+  ("o" #'+multiple-cursors/evil-mc-toggle-cursor-here)
+  ("r" #'+multiple-cursors/evil-mc-undo-cursor)
+  ("R" #'evil-mc-undo-all-cursors)
+  ("p" #'+multiple-cursors/evil-mc-toggle-cursors)
+  ("q" #'evil-mc-resume-cursors "quit" :color blue)
+  ("<escape>" #'evil-mc-resume-cursors "quit" :color blue))
+(map!
+ (:when (modulep! :editor multiple-cursors)
+   :prefix "g"
+   :nv "o" #'mc-hydra/body))
+
+;; Harpoon
+(setq harpoon-project-package '+workspace-current-name)
+(setq harpoon-without-project-function '+workspace-current-name)
+(map! "C-1" 'harpoon-go-to-1
+      "C-2" 'harpoon-go-to-2
+      "C-3" 'harpoon-go-to-3
+      "C-4" 'harpoon-go-to-4
+      "C-5" 'harpoon-go-to-5
+      ;; TODO: fix this.
+      ;; "C-6" 'harpoon-go-to-6
+      "C-7" 'harpoon-go-to-7
+      "C-8" 'harpoon-go-to-8
+      "C-9" 'harpoon-go-to-9
+      "C-0" 'harpoon-clear
+      ;; Alternative for faster changing.
+      "C-k" 'harpoon-go-to-1
+      "C-j" 'harpoon-go-to-2
+      "C-q" 'harpoon-go-to-3
+      "C-'" 'harpoon-go-to-4
+      :leader "a" 'harpoon-add-file)
+(defun entry-or-exit-harpoon ()
+  (interactive)
+  (if (eq major-mode 'harpoon-mode)
+      (progn
+        (basic-save-buffer)
+        (+popup/close))
+    (harpoon-toggle-file)
+    (+popup/buffer)))
+(map! :leader "u" #'entry-or-exit-harpoon)
+
+;; workspace
+(map! :nvig "C-<tab>" #'+workspace/switch-right)
+(map! :nvig "C-<iso-lefttab>" #'+workspace/switch-left)
+
+;; compile
+(map! :nvg "C-M-c" #'+ivy/project-compile)
+(defun compile-maximize ()
+  "Execute a compile command from the current project's root and maximizes window."
+  (interactive)
+  (recompile)
+  (doom/window-maximize-buffer))
+(map! :nvg "M-C" #'compile-maximize)
+
+;; doom scratch buffer
+(defun open-doom-scratch-buffer-maximized ()
+  "Open or close the *doom:scratch* buffer and maximize it."
+  (interactive)
+  (if (get-buffer-window "*doom:scratch*")
+      (switch-to-buffer (other-buffer))
+    (doom/open-scratch-buffer)
+    (call-interactively #'+popup/raise)))
+(map! :leader "x" #'open-doom-scratch-buffer-maximized)
+
+;; magit
+(map! :map magit-mode-map :nv "C-<tab>" #'+workspace/switch-right)
