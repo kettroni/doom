@@ -106,8 +106,65 @@ Current pattern: %`evil-mc-pattern
 (map! :leader "x" #'open-doom-scratch-buffer-maximized)
 
 ;; magit
-(map! :map magit-mode-map
-      "C-<tab>" #'+workspace/switch-right
-      "C-k"     #'harpoon-go-to-1
-      "C-j"     #'harpoon-go-to-2
-      "C-q"     #'harpoon-go-to-3)
+(after! magit
+  (map! :map magit-mode-map
+        :nv "C-<tab>" #'+workspace/switch-right
+        :nv "C-k"     #'harpoon-go-to-1
+        :nv "C-j"     #'harpoon-go-to-2
+        :nv "C-q"     #'harpoon-go-to-3))
+
+;; clojure
+(defun eval-surrounding-or-next-closure ()
+  "Evaluates surrounding closure if found, otherwise the next closure."
+  (interactive)
+  (save-excursion
+    (let ((original-point (point)))
+      (evil-visual-char)
+      (call-interactively #'evil-a-paren)
+      (call-interactively #'+eval:region)
+      (goto-char original-point))))
+(map! :leader "e" #'eval-surrounding-or-next-closure)
+
+(defun cider-repl-new-buffer ()
+  "Wrapper for `cider-jack-in-clj' that avoids splitting the window."
+  (interactive)
+  (+eval/open-repl-same-window)
+  (switch-to-buffer (other-buffer)))
+(after! cider
+  (map! :leader
+        (:prefix ("o" . "open")
+         :desc "Open repl in new buffer" "r" #'cider-repl-new-buffer)
+        "l" #'cider-load-buffer
+        "y" #'cider-kill-last-result))
+
+(defun next-open-paren ()
+  (interactive)
+  (forward-char 1)
+  (while (not (looking-at-p "("))
+    (forward-char 1)))
+
+(defun previous-open-paren ()
+  (interactive)
+  (backward-char 1)
+  (while (not (looking-at-p "("))
+    (backward-char 1)))
+
+(map! :map evil-normal-state-map
+      ")" 'next-open-paren
+      "(" 'previous-open-paren
+      "[" 'evil-backward-section-begin
+      "]" 'evil-forward-section-begin
+      "C-a" 'magit-status)
+
+(defun wrap-closure-insert ()
+  "Wraps the surrounding closure with new parentheses and starts inserting."
+  (interactive)
+  (evil-visual-char)
+  (call-interactively #'evil-a-paren)
+  (evil-surround-region (region-beginning) (region-end) ?\( ?\))
+  (evil-insert 1)
+  (evil-forward-char)
+  (insert " ")
+  (evil-backward-char))
+
+(map! "M-)" #'wrap-closure-insert)
