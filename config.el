@@ -106,4 +106,8 @@ Current pattern: %`evil-mc-pattern
 (map! :leader "x" #'open-doom-scratch-buffer-maximized)
 
 ;; magit
-(map! :map magit-mode-map :nv "C-<tab>" #'+workspace/switch-right)
+(map! :map magit-mode-map
+      "C-<tab>" #'+workspace/switch-right
+      "C-k"     #'harpoon-go-to-1
+      "C-j"     #'harpoon-go-to-2
+      "C-q"     #'harpoon-go-to-3)
