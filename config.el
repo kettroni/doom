@@ -186,7 +186,15 @@ If not found, create a new CIDER REPL buffer."
   (evil-forward-char)
   (insert " ")
   (evil-backward-char))
-(map! :map evil-normal-state-map
+(defun wrap-visual-insert ()
+  "Wraps the surrounding closure with new parentheses and starts inserting."
+  (interactive)
+  (evil-surround-region (region-beginning) (region-end) ?\( ?\))
+  (evil-insert 1)
+  (evil-forward-char)
+  (insert " ")
+  (evil-backward-char))
+(map! :map (evil-normal-state-map evil-visual-state-map)
       ")" 'next-open-paren
       "(" 'previous-open-paren
       "[" 'evil-backward-section-begin
@@ -194,6 +202,7 @@ If not found, create a new CIDER REPL buffer."
       "C-a" 'magit-status
       "M-)" #'wrap-closure-insert
       "?" #'eval-surrounding-or-next-closure)
+(map! :map evil-visual-state-map "M-)" #'wrap-visual-insert)
 
 ;; disable autosave modes
 (setq +format-on-save-disabled-modes
