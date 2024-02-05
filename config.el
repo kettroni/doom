@@ -146,10 +146,22 @@ Current pattern: %`evil-mc-pattern
   (interactive)
   (+eval/open-repl-same-window)
   (switch-to-buffer (other-buffer)))
+(defun open-or-create-repl ()
+  "Switch to a CIDER REPL buffer for the current workspace.
+If not found, create a new CIDER REPL buffer."
+  (interactive)
+  (let* ((workspace-name (+workspace-current-name))
+         (matching-buffers (seq-filter (lambda (buf)
+                                         (and (string-prefix-p "*cider-repl" (buffer-name buf))
+                                              (string-match-p workspace-name (buffer-name buf))))
+                                       (buffer-list))))
+    (if matching-buffers
+        (switch-to-buffer (car matching-buffers))
+      (cider-repl-new-buffer))))
 (after! cider
   (map! :leader
         (:prefix ("o" . "open")
-         :desc "Open repl in new buffer" "r" #'cider-repl-new-buffer)
+         :desc "Open repl in new buffer" "r" #'open-or-create-repl)
         "l" #'cider-load-buffer
         "y" #'cider-kill-last-result))
 
