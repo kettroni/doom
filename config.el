@@ -87,13 +87,20 @@ Current pattern: %`evil-mc-pattern
 (map! :nvig "C-<iso-lefttab>" #'+workspace/switch-left)
 
 ;; compile
-(map! :nvg "C-M-c" #'+ivy/project-compile)
 (defun compile-maximize ()
   "Execute a compile command from the current project's root and maximizes window."
   (interactive)
-  (recompile)
+  (+ivy/project-compile)
+  (evil-window-down 1)
   (doom/window-maximize-buffer))
-(map! :nvg "M-C" #'compile-maximize)
+(map! :nvg "C-M-c" #'compile-maximize)
+(defun recompile-maximize ()
+  "Execute a compile command from the current project's root and maximizes window."
+  (interactive)
+  (recompile)
+  (evil-window-down 1)
+  (doom/window-maximize-buffer))
+(map! :nvg "M-C" #'recompile-maximize)
 
 ;; doom scratch buffer
 (defun open-doom-scratch-buffer-maximized ()
