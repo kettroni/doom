@@ -1,6 +1,6 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
-;; Display stuff
+;; display stuff
 (toggle-frame-fullscreen)
 (setq doom-font (font-spec :family "Fira Code" :size 21 :weight 'semi-light))
 (setq doom-theme 'doom-gruvbox)
@@ -10,10 +10,10 @@
  '(mode-line ((t (:family "Fira Code" :height 0.80))))
  '(mode-line-inactive ((t (:family "Fira Code" :height 0.80)))))
 
-;; Paths
+;; org
 (setq org-directory "~/org/")
 
-;; This sets projectile path
+;; projectile
 (setq projectile-project-search-path '("~/code"))
 (setq projectile-auto-discover t)
 
@@ -52,7 +52,7 @@ Current pattern: %`evil-mc-pattern
    :prefix "g"
    :nv "o" #'mc-hydra/body))
 
-;; Harpoon
+;; harpoon
 (setq harpoon-project-package '+workspace-current-name)
 (setq harpoon-without-project-function '+workspace-current-name)
 (map! "C-1" 'harpoon-go-to-1
@@ -101,6 +101,15 @@ Current pattern: %`evil-mc-pattern
   (evil-window-down 1)
   (doom/window-maximize-buffer))
 (map! :nvg "M-C" #'recompile-maximize)
+(defun open-compilation-buffer-with-workspace-name ()
+  "Open the compilation buffer with the current workspace name."
+  (interactive)
+  (let ((workspace-name (+workspace-current-name))
+        (compilation-buffer-name (format "*compilation*<%s>" (+workspace-current-name))))
+    (if (get-buffer compilation-buffer-name)
+        (switch-to-buffer compilation-buffer-name)
+      (message "No compilation buffer for workspace '%s'" workspace-name))))
+(map! :nvg "C-c" #'open-compilation-buffer-with-workspace-name)
 
 ;; doom scratch buffer
 (defun open-doom-scratch-buffer-maximized ()
@@ -144,25 +153,17 @@ Current pattern: %`evil-mc-pattern
         "l" #'cider-load-buffer
         "y" #'cider-kill-last-result))
 
+;; evil-normal state
 (defun next-open-paren ()
   (interactive)
   (forward-char 1)
   (while (not (looking-at-p "("))
     (forward-char 1)))
-
 (defun previous-open-paren ()
   (interactive)
   (backward-char 1)
   (while (not (looking-at-p "("))
     (backward-char 1)))
-
-(map! :map evil-normal-state-map
-      ")" 'next-open-paren
-      "(" 'previous-open-paren
-      "[" 'evil-backward-section-begin
-      "]" 'evil-forward-section-begin
-      "C-a" 'magit-status)
-
 (defun wrap-closure-insert ()
   "Wraps the surrounding closure with new parentheses and starts inserting."
   (interactive)
@@ -173,5 +174,19 @@ Current pattern: %`evil-mc-pattern
   (evil-forward-char)
   (insert " ")
   (evil-backward-char))
+(map! :map evil-normal-state-map
+      ")" 'next-open-paren
+      "(" 'previous-open-paren
+      "[" 'evil-backward-section-begin
+      "]" 'evil-forward-section-begin
+      "C-a" 'magit-status
+      "M-)" #'wrap-closure-insert
+      "?" #'eval-surrounding-or-next-closure)
 
-(map! "M-)" #'wrap-closure-insert)
+;; disable autosave modes
+(setq +format-on-save-disabled-modes
+      '(emacs-lisp-mode  ; elisp's mechanisms are good enough
+        sql-mode         ; sqlformat is currently broken
+        tex-mode         ; latexindent is broken
+        latex-mode
+        nix-mode))
