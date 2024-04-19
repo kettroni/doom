@@ -2,13 +2,21 @@
 
 ;; display stuff
 (toggle-frame-fullscreen)
-(setq doom-font (font-spec :family "Fira Code" :size 21 :weight 'semi-light))
+(setq doom-font (font-spec :family "Fira Code" :size 24 :weight 'semi-light))
 (setq doom-theme 'doom-gruvbox)
 (setq display-line-numbers-type 'relative)
 (setq doom-modeline-height 1)
 (custom-set-faces
  '(mode-line ((t (:family "Fira Code" :height 0.80))))
  '(mode-line-inactive ((t (:family "Fira Code" :height 0.80)))))
+
+(setq scroll-margin 10)
+
+(set-frame-parameter nil 'alpha-background 30) ; For current frame
+(add-to-list 'default-frame-alist '(alpha-background . 30)) ; For all new frames henceforth
+
+;; Github auth src
+(setq auth-sources '("~/.authinfo"))
 
 ;; org
 (setq org-directory "~/org/")
@@ -84,7 +92,7 @@ Current pattern: %`evil-mc-pattern
 
 ;; workspace
 (map! :nvig "C-<tab>" #'+workspace/switch-right)
-(map! :nvig "C-<iso-lefttab>" #'+workspace/switch-left)
+(map! :nvig "C-S-<tab>" #'+workspace/switch-left)
 
 ;; compile
 (defun compile-maximize ()
@@ -94,6 +102,12 @@ Current pattern: %`evil-mc-pattern
   (evil-window-down 1)
   (doom/window-maximize-buffer))
 (map! :nvg "C-M-c" #'compile-maximize)
+(defun recompile-close ()
+  "Execute a recompile command from the current project's root and close minibuffer."
+  (interactive)
+  (project-recompile)
+  (+popup/toggle))
+(map! :nvg "M-r" #'recompile-close)
 (defun recompile-maximize ()
   "Execute a compile command from the current project's root and maximizes window."
   (interactive)
@@ -101,15 +115,15 @@ Current pattern: %`evil-mc-pattern
   (evil-window-down 1)
   (doom/window-maximize-buffer))
 (map! :nvg "M-C" #'recompile-maximize)
-(defun open-compilation-buffer-with-workspace-name ()
-  "Open the compilation buffer with the current workspace name."
-  (interactive)
-  (let ((workspace-name (+workspace-current-name))
-        (compilation-buffer-name (format "*compilation*<%s>" (+workspace-current-name))))
-    (if (get-buffer compilation-buffer-name)
-        (switch-to-buffer compilation-buffer-name)
-      (message "No compilation buffer for workspace '%s'" workspace-name))))
-(map! :nvg "C-c" #'open-compilation-buffer-with-workspace-name)
+;; (defun open-compilation-buffer-with-workspace-name ()
+;;   "Open the compilation buffer with the current workspace name."
+;;   (interactive)
+;;   (let ((workspace-name (+workspace-current-name))
+;;         (compilation-buffer-name (format "*compilation*<%s>" (+workspace-current-name))))
+;;     (if (get-buffer compilation-buffer-name)
+;;         (switch-to-buffer compilation-buffer-name)
+;;       (message "No compilation buffer for workspace '%s'" workspace-name))))
+;; (map! :nvg "C-c" #'open-compilation-buffer-with-workspace-name)
 
 ;; doom scratch buffer
 (defun open-doom-scratch-buffer-maximized ()
@@ -153,17 +167,34 @@ If not found, create a new CIDER REPL buffer."
   (let* ((workspace-name (+workspace-current-name))
          (matching-buffers (seq-filter (lambda (buf)
                                          (and (string-prefix-p "*cider-repl" (buffer-name buf))
+                                              (string-match-p workspace-name (buffer-name buf))
                                               (string-match-p workspace-name (buffer-name buf))))
                                        (buffer-list))))
     (if matching-buffers
         (switch-to-buffer (car matching-buffers))
       (cider-repl-new-buffer))))
+(defun open-or-create-cljs-repl ()
+  "Switch to a CIDER REPL buffer for the current workspace.
+If not found, create a new CIDER REPL buffer."
+  (interactive)
+  (let* ((workspace-name (+workspace-current-name))
+         (matching-buffers (seq-filter (lambda (buf)
+                                         (and (string-prefix-p "*cider-repl" (buffer-name buf))
+                                              (string-match-p workspace-name (buffer-name buf))
+                                              (string-match-p "cljs" (buffer-name buf))))
+                                       (buffer-list))))
+    (if matching-buffers
+        (switch-to-buffer (car matching-buffers))
+      (cider-repl-new-buffer))))
+
 (after! cider
   (map! :leader
         (:prefix ("o" . "open")
          :desc "Open repl in new buffer" "r" #'open-or-create-repl)
         "l" #'cider-load-buffer
         "y" #'cider-kill-last-result))
+
+(map! "C-M-e" #'clojure-align)
 
 ;; evil-normal state
 (defun next-open-paren ()
@@ -176,6 +207,27 @@ If not found, create a new CIDER REPL buffer."
   (backward-char 1)
   (while (not (looking-at-p "("))
     (backward-char 1)))
+(defun previous-closing-paren ()
+  (interactive)
+  (backward-char 1)
+  (while (not (looking-at-p ")"))
+    (backward-char 1)))
+(defun next-open-paren-same-level ()
+  "Move point to the next open parenthesis at the same level."
+  (interactive)
+  (evil-visual-char)
+  (call-interactively #'evil-a-paren)
+  (evil-force-normal-state)
+  (next-open-paren))
+(defun previous-open-paren-same-level ()
+  "Move point to the previous open parenthesis at the same level."
+  (interactive)
+  (evil-visual-char)
+  (call-interactively #'evil-a-paren)
+  (evil-force-normal-state)
+  (evil-jump-item)
+  (previous-closing-paren)
+  (evil-jump-item))
 (defun wrap-closure-insert ()
   "Wraps the surrounding closure with new parentheses and starts inserting."
   (interactive)
@@ -194,15 +246,23 @@ If not found, create a new CIDER REPL buffer."
   (evil-forward-char)
   (insert " ")
   (evil-backward-char))
+(remove-hook 'doom-first-input-hook #'evil-snipe-mode)
 (map! :map (evil-normal-state-map evil-visual-state-map)
       ")" 'next-open-paren
       "(" 'previous-open-paren
-      "[" 'evil-backward-section-begin
-      "]" 'evil-forward-section-begin
+      "[" 'previous-open-paren-same-level
+      "]" 'next-open-paren-same-level
       "C-a" 'magit-status
       "M-)" #'wrap-closure-insert
-      "?" #'eval-surrounding-or-next-closure)
+      "?" #'eval-surrounding-or-next-closure
+      "<backspace>" #'evil-avy-goto-char-2
+      "m"   #'avy-resume
+      ";" #'avy-prev
+      "," #'avy-next
+      "s" #'avy-isearch
+      "RET" #'evil-avy-goto-char-timer)
 (map! :map evil-visual-state-map "M-)" #'wrap-visual-insert)
+(setq! avy-timeout-seconds 0.25)
 
 ;; disable autosave modes
 (setq +format-on-save-disabled-modes
@@ -211,3 +271,9 @@ If not found, create a new CIDER REPL buffer."
         tex-mode         ; latexindent is broken
         latex-mode
         nix-mode))
+
+;; safe-local-variables
+(defun add-safe-variables ()
+  (push '(cider-shadow-cljs-command . "lein with-profile cljs,cljs-dev,user run -m shadow.cljs.devtools.cli -- ") safe-local-variable-values))
+
+(add-hook 'after-init-hook 'add-safe-variables)
